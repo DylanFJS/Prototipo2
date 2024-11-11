@@ -1,24 +1,37 @@
-import axios from 'axios';
+// import axios from 'axios';
 
-const API_URL = 'http://localhost:3000/api/auth'; // Puedes mantener esto, pero no lo usaremos en la simulación
+// const API_URL = 'https://localhost:30013/api/login'; // Puedes mantener esto, pero no lo usaremos en la simulación
 
 class AuthService {
-  // Simulamos un usuario para propósitos de prueba
-  simulateUser = {
-    username: 'us',
-    password: 'pass123',
-  };
+
 
   async login(username, password) {
-    // Comparamos las credenciales ingresadas con las simuladas
-    if (username === this.simulateUser.username && password === this.simulateUser.password) {
-      const user = { username: this.simulateUser.username }; // Simula un objeto de usuario
-      localStorage.setItem('user', JSON.stringify(user)); // Guardamos el usuario en localStorage
-      return { success: true, user }; // Retornamos un objeto que simula la respuesta exitosa
-    } else {
-      throw new Error('Usuario incorrecto'); // Lanza un error si las credenciales no coinciden
-    }
+    return fetch('http://localhost:30013/api/login',{
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+          usuario: username,
+          pass: password
+      })
+    }).then(response => {
+      if (!response.ok) {
+        // throw new Error('Error en la respuesta de la API: ERROR ' + response.status + ' : ' + response.body);
+        throw new Error('Error en la respuesta de la API: ERROR ',response)
+      }
+      return response.json();
+    }).then(data => {
+      // console.log('Datos recibidos:', data);
+      // console.log(typeof data);
+      localStorage.setItem('user', JSON.stringify(data.vendedor));
+      return data;
+    }).catch(err => {
+      console.error('ERROR:',err)
+      throw err;
+    })
   }
+
 
   logout() {
     localStorage.clear(); // Limpia el localStorage

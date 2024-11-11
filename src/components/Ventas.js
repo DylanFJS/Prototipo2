@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import ProductItem from './ProductItem';
 
@@ -12,13 +13,46 @@ const Ventas = () => {
     const [carrito, setCarrito] = useState([]);
     const [historial, setHistorial] = useState([]);
     const [showModal, setShowModal] = useState(false);
-  
+    const navigate = useNavigate();
+
+    // // useEffect para verificar la autenticación
+    // useEffect(() => {
+    //   const user = JSON.parse(localStorage.getItem('user'));
+    //   if (!user) {
+    //     // Redirige al login si no hay un usuario en localStorage
+    //     navigate('/');
+    //   }
+    // }, [navigate]);
     useEffect(() => {
-      setProductos([
-        { id: 1, nombre: 'Producto 1', precio: 100, stock: 10 },
-        { id: 2, nombre: 'Producto 2', precio: 200, stock: 5 },
-        { id: 3, nombre: 'Producto 3', precio: 300, stock: 3 },
-      ]);
+
+    }, [])
+    useEffect(() => {
+      fetch('http://localhost:30013/api/productos',{
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }).then(response => {
+        if (!response.ok) {
+          // throw new Error('Error en la respuesta de la API: ERROR ' + response.status + ' : ' + response.body);
+          throw new Error('Error en la respuesta de la API: ERROR ',response)
+        }
+        return response.json();
+      }).then(data => {
+        console.log('Datos recibidos:', data);
+        // console.log(typeof data);
+        setProductos(data)
+        return data;
+      }).catch(err => {
+        console.error('ERROR:',err)
+        throw err;
+      })
+      
+      // setProductos([
+      //   { id: 1, nombre: 'Producto 1', precio: 100, stock: 10 },
+      //   { id: 2, nombre: 'Producto 2', precio: 200, stock: 5 },
+      //   { id: 3, nombre: 'Producto 3', precio: 300, stock: 3 },
+      // ]);
     }, []);
   
     const agregarAlCarrito = () => {
@@ -27,7 +61,7 @@ const Ventas = () => {
         return;
       }
   
-      const producto = productos.find((p) => p.id === productoSeleccionado.id);
+      const producto = productos.find((p) => p.id_producto === productoSeleccionado.id_producto);
       if (producto.stock < cantidad) {
         alert('Producto no disponible');
         return;
@@ -41,7 +75,7 @@ const Ventas = () => {
       // Reduce temporalmente el stock del producto seleccionado
       setProductos((prevProductos) =>
         prevProductos.map((p) =>
-          p.id === producto.id ? { ...p, stock: p.stock - cantidad } : p
+          p.id_producto === producto.id_producto ? { ...p, stock: p.stock - cantidad } : p
         )
       );
     };
@@ -62,6 +96,8 @@ const Ventas = () => {
         fecha: new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' }),
         total,
       };
+      console.log(nuevaCompra);
+      
       setHistorial([nuevaCompra, ...historial].slice(0, 10));
   
       // Limpiar carrito y estado
@@ -75,7 +111,7 @@ const Ventas = () => {
       // Restablecer el stock de los productos
       setProductos((prevProductos) =>
         prevProductos.map((p) => {
-          const itemCarrito = carrito.find((item) => item.id === p.id);
+          const itemCarrito = carrito.find((item) => item.id_producto === p.id_producto);
           if (itemCarrito) {
             return { ...p, stock: p.stock + itemCarrito.cantidad };
           }
@@ -110,7 +146,7 @@ const Ventas = () => {
         >
           <option value="">Selecciona un producto</option>
           {productos.map((producto) => (
-            <option key={producto.id} value={producto.nombre}>
+            <option key={producto.id_producto} value={producto.nombre}>
               {producto.nombre} - Precio: {producto.precio} - Stock: {producto.stock}
             </option>
           ))}
