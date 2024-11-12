@@ -8,13 +8,13 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+
   const handleLogin = async (e) => {
-    console.log('handle login');
     e.preventDefault();
     try {
       await AuthService.login(username, password);
       navigate('/ventas');
-      // window.location.reload();
+      window.location.reload();
     } catch {
       alert('Usuario incorrecto');
     }
@@ -27,7 +27,7 @@ const Login = () => {
   return (
     <div className="login-container">
       <div className="navbar">
-        <h1>HartiVoit</h1>
+        <h1>HartiVolt</h1>
       </div>
       <div className="form-container">
         <h2>Iniciar Sesión</h2>

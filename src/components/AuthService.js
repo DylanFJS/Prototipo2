@@ -1,7 +1,3 @@
-// import axios from 'axios';
-
-// const API_URL = 'https://localhost:30013/api/login'; // Puedes mantener esto, pero no lo usaremos en la simulación
-
 class AuthService {
 
 
