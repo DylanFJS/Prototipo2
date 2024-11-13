@@ -10,8 +10,8 @@ const Ventas = ({ onLogout }) => {
   const [carrito, setCarrito] = useState([]);
   const [historial, setHistorial] = useState([]);
   const [showModal, setShowModal] = useState(false);
-  const [showDetalleModal, setShowDetalleModal] = useState(false); // Nuevo estado para mostrar el detalle
-  const [detalleCompra, setDetalleCompra] = useState(null); // Estado para almacenar la compra seleccionada
+  const [showDetalleModal, setShowDetalleModal] = useState(false);
+  const [detalleCompra, setDetalleCompra] = useState(null);
   const [filtro, setFiltro] = useState('');
   const [ordenNombre, setOrdenNombre] = useState('');
   const [fechaCompra, setFechaCompra] = useState('');
@@ -19,13 +19,12 @@ const Ventas = ({ onLogout }) => {
   const [fechaHasta, setFechaHasta] = useState('');
   const [nombreClienteFiltro, setNombreClienteFiltro] = useState('');
   const [historialFiltrado, setHistorialFiltrado] = useState([]);
-  const [paginaActual, setPaginaActual] = useState(1); // Página actual
-  const [comprasPorPagina] = useState(5); // Número de compras por página
+  const [paginaActual, setPaginaActual] = useState(1);
+  const [comprasPorPagina] = useState(5);
 
   useEffect(() => {
     const fetchProductos = async () => {
       try {
-        // Reemplaza esta URL con la URL real de tu backend
         const response = await fetch('http://localhost:30013/api/productos');
         const data = await response.json();
         setProductos(data);
@@ -35,91 +34,66 @@ const Ventas = ({ onLogout }) => {
     };
     fetchProductos();
   }, []);
-  
-  useEffect(() => {
-    const fetchHistorial = async () => {
-      try {
-        const response = await fetch('http://localhost:30013/api/ventas/get-ventas');
-        const data = await response.json();
-        console.log('Datos recibidos:', data);
-  
-        // Verificar si los datos contienen el campo 'nombre_cliente'
-        if (data.ventas && Array.isArray(data.ventas)) {
-          data.ventas.forEach(venta => {
-            if (!venta.nombre_cliente) {
-              console.warn(`Venta con id ${venta.id_venta} tiene 'nombre_cliente' como undefined o null`);
-            }
-          });
-          setHistorial(data.ventas);
-        }
-      } catch (error) {
-        console.error('Error al obtener el historial de ventas:', error);
-      }
-    };
-  
-    fetchHistorial();
-  }, []);
-  
 
-useEffect(() => {
-  const fetchHistorial = async () => {
+  const actualizarHistorial = async () => {
     try {
       const response = await fetch('http://localhost:30013/api/ventas/get-ventas');
       const data = await response.json();
-      console.log('Datos del historial de ventas:', data);  // Verifica los datos que estás recibiendo
-
       if (data.ventas && Array.isArray(data.ventas)) {
-        setHistorial(data.ventas);  // Ahora accedemos a data.ventas
+        setHistorial(data.ventas);
+        console.log('Historial actualizado:', data.ventas);
       } else {
         console.error('Error: la respuesta no contiene un array de ventas');
-        setHistorial([]);  // Si no contiene ventas, establecer historial vacío
       }
     } catch (error) {
       console.error('Error al obtener el historial de ventas:', error);
-      setHistorial([]);  // Si hay error, establecer historial vacío
     }
   };
-  fetchHistorial();
-}, []);
+
+  useEffect(() => {
+    actualizarHistorial();
+  }, []);
 
   useEffect(() => {
     let filteredHistorial = [...historial];
-
+  
     if (filtro === 'nombreCliente' && nombreClienteFiltro) {
       filteredHistorial = filteredHistorial.filter((compra) =>
-        compra.cliente.toLowerCase().includes(nombreClienteFiltro.toLowerCase())
+        compra.nombre_cliente.toLowerCase().startsWith(nombreClienteFiltro.toLowerCase())
       );
     }
-
+  
     if (filtro === 'fecha' && fechaDesde && fechaHasta) {
       const fechaDesdeObj = new Date(fechaDesde);
       const fechaHastaObj = new Date(fechaHasta);
-
+  
       filteredHistorial = filteredHistorial.filter((compra) => {
         const fechaCompra = new Date(compra.fecha);
         return fechaCompra >= fechaDesdeObj && fechaCompra <= fechaHastaObj;
       });
     }
-
+  
     switch (filtro) {
       case 'nombreCliente':
         filteredHistorial = filteredHistorial.sort((a, b) =>
           ordenNombre === 'asc'
-            ? a.cliente.localeCompare(b.cliente)
-            : b.cliente.localeCompare(a.cliente)
+            ? a.nombre_cliente.localeCompare(b.nombre_cliente)
+            : b.nombre_cliente.localeCompare(a.nombre_cliente)
         );
         break;
       case 'nombreVendedor':
         filteredHistorial = filteredHistorial.sort((a, b) =>
-          a.vendedor.localeCompare(b.vendedor)
+          a.nombre_vendedor.localeCompare(b.nombre_vendedor)
         );
         break;
       default:
         break;
     }
-
+  
     setHistorialFiltrado(filteredHistorial);
   }, [historial, filtro, ordenNombre, fechaDesde, fechaHasta, nombreClienteFiltro]);
+  
+  
 
   const agregarAlCarrito = () => {
     if (!cliente) {
@@ -129,24 +103,40 @@ useEffect(() => {
 
     if (!productoSeleccionado) {
       alert('Por favor, selecciona un producto');
+      console.log("Error: Producto seleccionado es null o undefined");
       return;
     }
 
-    const producto = productos.find((p) => p.id === productoSeleccionado.id);
+    const producto = productos.find((p) => p.id_producto === productoSeleccionado.id_producto);
+    if (!producto) {
+      alert('Producto no encontrado');
+      return;
+    }
+
     if (producto.stock < cantidad) {
       alert('Producto no disponible');
       return;
     }
 
     const nuevoProducto = { ...producto, cantidad };
-    setCarrito([...carrito, nuevoProducto]);
-    setTotal(total + producto.precio * cantidad);
+    console.log("Nuevo producto agregado al carrito:", nuevoProducto);
+    setCarrito((prevCarrito) => {
+      const nuevoCarrito = [...prevCarrito, nuevoProducto];
+      console.log("Carrito actualizado:", nuevoCarrito);
+      return nuevoCarrito;
+    });
+    setTotal((prevTotal) => prevTotal + producto.precio * cantidad);
 
+    // Actualizar el stock del producto
     setProductos((prevProductos) =>
       prevProductos.map((p) =>
-        p.id === producto.id ? { ...p, stock: p.stock - cantidad } : p
+        p.id_producto === producto.id_producto ? { ...p, stock: p.stock - cantidad } : p
       )
     );
+
+    // Reiniciar la selección del producto y la cantidad
+    setProductoSeleccionado(null);
+    setCantidad(1);
   };
 
   const abrirModal = () => {
@@ -157,27 +147,52 @@ useEffect(() => {
     setShowModal(true);
   };
 
-  const aceptarCompra = () => {
+  const aceptarCompra = async () => {
+    const user = localStorage.getItem('user');
+    console.log("user_id", JSON.parse(user).id_vendedor);
     const nuevaCompra = {
-      cliente,
-      productos: carrito,
-      fecha: fechaCompra || new Date().toLocaleString('es-CO', { timeZone: 'America/Bogota' }),
-      total,
-      vendedor: 'Vendedor 1',
+      nombre_cliente: cliente,
+      pedidos: carrito.map((x) => ({ id_producto: x.id_producto, cantidad: x.cantidad })),
+      total: carrito.reduce((acc, item) => acc + item.precio * item.cantidad, 0),
+      id_vendedor: JSON.parse(user).id_vendedor
     };
-    setHistorial([nuevaCompra, ...historial].slice(0, 10)); // Limitar a las 10 compras más recientes
+    console.log("Nueva compra:", nuevaCompra);
 
-    setCarrito([]);
-    setTotal(0);
-    setShowModal(false);
-    setCliente('');
-    setFechaCompra('');
+    // Enviar los datos al backend
+    try {
+      const response = await fetch('http://localhost:30013/api/ventas/registrar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(nuevaCompra),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Compra guardada correctamente:', data);
+
+        // Actualizar el historial de compras después de una compra exitosa
+        await actualizarHistorial();
+
+        // Limpiar el carrito y otros estados
+        setCarrito([]);
+        setTotal(0);
+        setShowModal(false);
+        setCliente('');
+        setFechaCompra('');
+      } else {
+        console.error('Error al guardar la compra');
+      }
+    } catch (error) {
+      console.error('Error al realizar la solicitud al backend:', error);
+    }
   };
 
   const rechazarCompra = () => {
     setProductos((prevProductos) =>
       prevProductos.map((p) => {
-        const itemCarrito = carrito.find((item) => item.id === p.id);
+        const itemCarrito = carrito.find((item) => item.id_producto === p.id_producto);
         return itemCarrito ? { ...p, stock: p.stock + itemCarrito.cantidad } : p;
       })
     );
@@ -213,10 +228,39 @@ useEffect(() => {
     paginaActual * comprasPorPagina
   );
 
-  const mostrarDetalleCompra = (compra) => {
-    setDetalleCompra(compra);
-    setShowDetalleModal(true);
+  const mostrarDetalleCompra = async (compraId) => {
+    try {
+      const response = await fetch(`http://localhost:30013/api/ventas/get-venta/${compraId}`);
+      const data = await response.json();
+      if (response.ok) {
+        setDetalleCompra(data.venta);
+        setShowDetalleModal(true);
+      } else {
+        console.error('Error al obtener los detalles de la compra:', data.message);
+      }
+    } catch (error) {
+      console.error('Error al realizar la solicitud al backend:', error);
+    }
   };
+  
+  // Renderiza los detalles en el modal
+  {showDetalleModal && detalleCompra && (
+    <div className="modal">
+      <h3>Detalles de la compra</h3>
+      <p>Cliente: {detalleCompra.nombre_cliente}</p>
+      <p>Fecha: {detalleCompra.fecha}</p>
+      <p>Total: {detalleCompra.total}</p>
+      <ul>
+        {detalleCompra.pedidos.map((producto, index) => (
+          <li key={index}>
+            Producto: {producto.producto} - Cantidad: {producto.cantidad} - Precio unitario: {producto.precio_unitario} - Total: {producto.total}
+          </li>
+        ))}
+      </ul>
+      <button onClick={() => setShowDetalleModal(false)}>Cerrar</button>
+    </div>
+  )}
+  
 
   return (
     <div className="ventas-layout">
@@ -237,7 +281,6 @@ useEffect(() => {
           />
         </div>
 
-        {/* Fecha de compra antes de la selección del producto */}
         <div className="fecha-compra">
           <label>Fecha de compra: </label>
           <input
@@ -246,18 +289,18 @@ useEffect(() => {
             onChange={(e) => setFechaCompra(e.target.value)}
           />
         </div>
-
-        {/* Selección de producto y cantidad */}
         <div className="producto-section">
           <select
+            value={productoSeleccionado ? productoSeleccionado.id_producto : ""}
             onChange={(e) => {
-              const producto = productos.find((p) => p.nombre === e.target.value);
+              const producto = productos.find((p) => p.id_producto === parseInt(e.target.value, 10));
+              console.log("Producto seleccionado:", producto);
               setProductoSeleccionado(producto);
             }}
           >
             <option value="">Selecciona un producto</option>
             {productos.map((producto) => (
-              <option key={producto.id} value={producto.nombre}>
+              <option key={producto.id_producto} value={producto.id_producto}>
                 {producto.nombre} - Precio: {producto.precio} - Stock: {producto.stock}
               </option>
             ))}
@@ -299,7 +342,6 @@ useEffect(() => {
         )}
       </div>
 
-      {/* Filtros */}
       <div className="filtros">
         <h3>Filtrar Historial</h3>
         <select value={filtro} onChange={handleFiltroChange}>
@@ -344,23 +386,24 @@ useEffect(() => {
               </tr>
             </thead>
             <tbody>
-              {comprasPorPaginaActual.map((compra, index) => (
-                <tr key={index}>
-                  <td>{compra.cliente}</td>
-                  <td>{compra.fecha}</td>
-                  <td>{compra.vendedor}</td>
-                  <td>{compra.total}</td>
-                  <td>
-                    <button
-                      className="ver-detalles-btn"
-                      onClick={() => mostrarDetalleCompra(compra)}
-                    >
-                      👁️
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
+            {comprasPorPaginaActual.map((compra, index) => (
+    < tr key={index}>
+      <td>{compra.nombre_cliente}</td>
+      <td>{compra.fecha}</td>
+      <td>{compra.vendedor}</td>
+      <td>{compra.pedidos.reduce((acc, el) => acc + el.total, 0)}</td>
+      <td>
+        <button
+          className="ver-detalles-btn"
+          onClick={() => mostrarDetalleCompra(compra)}
+        >
+          👁️
+        </button>
+      </td>
+    </tr>
+  ))}
+</tbody>
+
           </table>
 
           <div className="paginacion">
@@ -377,15 +420,14 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* Modal de detalle de compra */}
       {showDetalleModal && detalleCompra && (
         <div className="modal">
           <h3>Detalles de la compra</h3>
-          <p>Cliente: {detalleCompra.cliente}</p>
+          <p>Cliente: {detalleCompra.nombre_cliente}</p>
           <p>Fecha: {detalleCompra.fecha}</p>
           <p>Total: {detalleCompra.total}</p>
           <ul>
-            {detalleCompra.productos.map((producto, index) => (
+            {detalleCompra.pedidos.map((producto, index) => (
               <li key={index}>
                 {producto.nombre} - Cantidad: {producto.cantidad} - Precio: {producto.precio}
               </li>
@@ -399,4 +441,4 @@ useEffect(() => {
 };
 
 export default Ventas;
-  
+
