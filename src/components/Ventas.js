@@ -90,8 +90,12 @@ const Ventas = ({ onLogout }) => {
         break;
     }
   
+    // Ordenar por fecha en orden descendente
+    filteredHistorial = filteredHistorial.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+  
     setHistorialFiltrado(filteredHistorial);
   }, [historial, filtro, ordenNombre, fechaDesde, fechaHasta, nombreClienteFiltro]);
+  
   
   
 
@@ -222,13 +226,16 @@ const Ventas = ({ onLogout }) => {
       setPaginaActual(paginaActual - 1);
     }
   };
+  
 
   const comprasPorPaginaActual = historialFiltrado.slice(
     (paginaActual - 1) * comprasPorPagina,
     paginaActual * comprasPorPagina
   );
+  const [loadingDetalle, setLoadingDetalle] = useState(false);
 
   const mostrarDetalleCompra = async (compraId) => {
+    setLoadingDetalle(true);
     try {
       const response = await fetch(`http://localhost:30013/api/ventas/get-venta/${compraId}`);
       const data = await response.json();
@@ -241,7 +248,9 @@ const Ventas = ({ onLogout }) => {
     } catch (error) {
       console.error('Error al realizar la solicitud al backend:', error);
     }
+    setLoadingDetalle(false);
   };
+  
   
   // Renderiza los detalles en el modal
   {showDetalleModal && detalleCompra && (
@@ -282,13 +291,9 @@ const Ventas = ({ onLogout }) => {
         </div>
 
         <div className="fecha-compra">
-          <label>Fecha de compra: </label>
-          <input
-            type="date"
-            value={fechaCompra}
-            onChange={(e) => setFechaCompra(e.target.value)}
-          />
-        </div>
+  <label>Fecha de compra: {new Date().toLocaleString('es-CO')}</label>
+</div>
+
         <div className="producto-section">
           <select
             value={productoSeleccionado ? productoSeleccionado.id_producto : ""}
@@ -394,11 +399,12 @@ const Ventas = ({ onLogout }) => {
       <td>{compra.pedidos.reduce((acc, el) => acc + el.total, 0)}</td>
       <td>
         <button
-          className="ver-detalles-btn"
-          onClick={() => mostrarDetalleCompra(compra)}
-        >
-          👁️
-        </button>
+  className="ver-detalles-btn"
+  onClick={() => mostrarDetalleCompra(compra.id_venta)}
+>
+  {loadingDetalle ? 'Cargando...' : '👁️'}
+</button>
+
       </td>
     </tr>
   ))}
@@ -420,22 +426,31 @@ const Ventas = ({ onLogout }) => {
         </div>
       </div>
 
-      {showDetalleModal && detalleCompra && (
-        <div className="modal">
-          <h3>Detalles de la compra</h3>
-          <p>Cliente: {detalleCompra.nombre_cliente}</p>
-          <p>Fecha: {detalleCompra.fecha}</p>
-          <p>Total: {detalleCompra.total}</p>
-          <ul>
-            {detalleCompra.pedidos.map((producto, index) => (
-              <li key={index}>
-                {producto.nombre} - Cantidad: {producto.cantidad} - Precio: {producto.precio}
-              </li>
-            ))}
-          </ul>
-          <button onClick={() => setShowDetalleModal(false)}>Cerrar</button>
-        </div>
-      )}
+      {showDetalleModal && (
+  <div className="modal">
+    {loadingDetalle ? (
+      <p>Cargando detalles...</p>
+    ) : detalleCompra ? (
+      <div>
+        <h3>Detalles de la compra</h3>
+        <p>Cliente: {detalleCompra.nombre_cliente}</p>
+        <p>Fecha: {new Date(detalleCompra.fecha).toLocaleDateString()}</p>
+        <ul>
+          {detalleCompra.pedidos.map((producto, index) => (
+            <li key={index}>
+              Producto: {producto.producto} - Cantidad: {producto.cantidad} - Precio unitario: {producto.precio_unitario}
+            </li>
+          ))}
+        </ul>
+        <h4>Total: {detalleCompra.pedidos.reduce((acc, el) => acc + el.total, 0)}</h4>
+        <button onClick={() => setShowDetalleModal(false)}>Cerrar</button>
+      </div>
+    ) : (
+      <p>Detalles no disponibles</p>
+    )}
+  </div>
+)}
+
     </div>
   );
 };
